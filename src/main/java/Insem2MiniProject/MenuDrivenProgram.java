@@ -1,6 +1,7 @@
 package Insem2MiniProject;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.*;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.support.ui.*;
@@ -9,13 +10,10 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Scanner;
-import org.apache.commons.io.FileUtils;
 
 public class MenuDrivenProgram {
 
     static WebDriver driver;
-    static String githubUrl = "https://github.com/login";  // GitHub Login URL
-    static String amazonUrl = "https://www.amazon.in/";    // Amazon URL
 
     public static void main(String[] args) {
         WebDriverManager.edgedriver().setup();
@@ -25,186 +23,241 @@ public class MenuDrivenProgram {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
-            System.out.println("\nSelect an option:\n1. GitHub Login\n2. Static Locators (Amazon)\n3. Dynamic Locators (Amazon)\n4. HTML Controls\n5. Alerts\n6. Window & Screenshot\n7. Exit");
-            int choice = scanner.nextInt();
+            System.out.println("\nSelect an option:");
+            System.out.println("a) Open the browser");
+            System.out.println("b) Open the given URL");
+            System.out.println("c) Open GitHub URL and validate credentials");
+            System.out.println("d) Open GitHub URL and handle invalid credentials");
+            System.out.println("e) Implement all locators (static)");
+            System.out.println("f) Implement CSS Selector (dynamic)");
+            System.out.println("g) Implement XPath (dynamic)");
+            System.out.println("h) Develop HTML controls (checkbox, radio, dropdowns)");
+            System.out.println("i) Implement alerts (simple, confirm, prompt)");
+            System.out.println("j) Handle window and take a screenshot after GitHub push");
+            System.out.println("k) Exit");
+System.out.println("Enter your choice from a to k: ");
+            String choice = scanner.nextLine();
 
-            switch (choice) {
-                case 1:
-                    driver.get(githubUrl);
-                    if (validateGitHubLogin("2200032199@kluniversity.in", "2004@Ayyappa")) {
-                        System.out.println("Login successful.");
-                    } else {
-                        System.out.println("Invalid credentials.");
-                    }
+            switch (choice.toLowerCase()) {
+                case "a":
+                    driver.manage().window().maximize();
+                    System.out.println("Browser opened.");
                     break;
-                case 2:
-                    driver.get(amazonUrl);
-                    handleStaticLocatorsAmazon();
+
+                case "b":
+                    System.out.print("Enter URL: ");
+                    String url = "https://github.com/login";
+                    driver.get(url);
+                    System.out.println("Opened URL: " + url);
                     break;
-                case 3:
-                    driver.get(amazonUrl);
-                    handleDynamicLocators();
+
+                case "c":
+                    System.out.print("Enter GitHub username: ");
+                    String username = scanner.nextLine();
+                    System.out.print("Enter GitHub password: ");
+                    String password = scanner.nextLine();
+                    boolean valid = validateGitHubLogin(username, password);
+                    System.out.println("Login valid: " + valid);
                     break;
-                case 4:
+
+                case "d":
+                    System.out.print("Enter GitHub username: ");
+                    String invalidUsername = scanner.nextLine();
+                    System.out.print("Enter GitHub password: ");
+                    String invalidPassword = scanner.nextLine();
+                    handleInvalidCredentials("https://github.com/login", invalidUsername, invalidPassword);
+                    break;
+
+                case "e":
+                    handleStaticLocators();
+                    break;
+
+                case "f":
+                    handleDynamicCssSelector();
+                    break;
+
+                case "g":
+                    handleDynamicXPath();
+                    break;
+
+                case "h":
                     handleHtmlControls();
                     break;
-                case 5:
+
+                case "i":
                     handleAlerts();
                     break;
-                case 6:
-                    handleWindowsAndScreenshot();
+
+                case "j":
+                    handleWindowAndScreenshot();
                     break;
-                case 7:
+
+                case "k":
                     System.out.println("Exiting the program.");
                     driver.quit();
                     scanner.close();
                     return;
+
                 default:
-                    System.out.println("Invalid choice.");
+                    System.out.println("Invalid choice. Please choose again.");
             }
         }
     }
 
-    // ✅ GitHub Login Implementation
     public static boolean validateGitHubLogin(String username, String password) {
+
         try {
+
+            driver.get("https://github.com/login");
             driver.findElement(By.id("login_field")).sendKeys(username);
             driver.findElement(By.id("password")).sendKeys(password);
-            driver.findElement(By.name("commit")).submit();
+            driver.findElement(By.name("commit")).click();
 
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-            wait.until(ExpectedConditions.urlContains("github.com"));
-            return driver.getCurrentUrl().contains("github.com");
-        } catch (NoSuchElementException | TimeoutException e) {
-            return false;
-        }
-    }
 
-    // ✅ Static Locators (Amazon Elements)
-    public static void handleStaticLocatorsAmazon() {
-        try {
-            WebElement searchBox = driver.findElement(By.id("twotabsearchtextbox")); // ✅ Static Locator (Search Box)
-            searchBox.sendKeys("Laptop");
+            wait.until(ExpectedConditions.or(
+                    ExpectedConditions.urlContains("github.com"),
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.flash-error"))
+            ));
 
-            WebElement searchButton = driver.findElement(By.id("nav-search-submit-button")); // ✅ Static Locator (Search Button)
-            searchButton.click();
+            if (driver.getCurrentUrl().equals("https://github.com/") || driver.getPageSource().contains("Sign out")) {
+                System.out.println("login success");
+                return true;
+            }
 
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-            WebElement amazonLogo = wait.until(ExpectedConditions.elementToBeClickable(By.id("nav-logo-sprites")));
-            amazonLogo.click();
-
-            System.out.println("Static locators on Amazon executed successfully.");
         } catch (Exception e) {
-            System.out.println("Static locators error: " + e.getMessage());
+            System.out.println("Error validating GitHub login: " + e.getMessage());
         }
+        return false;
+
     }
 
-    // 🚀 Dynamic Locators (Amazon Elements)
-    public static void handleDynamicLocators() {
+    public static void handleInvalidCredentials(String url, String username, String password) {
         try {
-            WebElement dynamicCss = driver.findElement(By.cssSelector("div[id^='nav-cart']")); // ✅ Dynamic Locator (Cart)
-            dynamicCss.click();
-
-            WebElement dynamicXpath = driver.findElement(By.xpath("//div[contains(@id, 'nav-cart')]")); // ✅ Dynamic Locator
-            dynamicXpath.click();
-
-            System.out.println("Dynamic locators executed successfully.");
-        } catch (Exception e) {
-            System.out.println("Dynamic locators error: " + e.getMessage());
-        }
-    }
-
-    // ✅ Handling HTML Controls on Flipkart
-    public static void handleHtmlControls() {
-        try {
-            driver.get("https://www.flipkart.com/login");
-
+            driver.get(url);
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
-            // ✅ Close login popup if it appears
-            try {
-                WebElement closeBtn = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[contains(text(),'✕')]")));
-                closeBtn.click();
-                System.out.println("Login popup closed.");
-            } catch (Exception e) {
-                System.out.println("Login popup not displayed.");
+            // Check if user is already logged in by checking the URL or presence of logout button
+            if (driver.getCurrentUrl().equals("https://github.com/") || driver.getPageSource().contains("Sign out")) {
+                System.out.println("Already logged in. Logout first to test invalid credentials.");
+                return;
             }
 
-            // ✅ Step 1: Search for a product (Laptop)
-            WebElement searchBox = wait.until(ExpectedConditions.elementToBeClickable(By.name("q")));
-            searchBox.sendKeys("Laptop");
-            searchBox.sendKeys(Keys.RETURN);
+            WebElement usernameField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("login_field")));
+            WebElement passwordField = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("password")));
+            WebElement signInButton = wait.until(ExpectedConditions.elementToBeClickable(By.name("commit")));
 
-            // ✅ Step 2: Wait for search results to load
-            wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("._1YokD2 ._1AtVbE")));
+            usernameField.sendKeys(username);
+            passwordField.sendKeys(password);
+            signInButton.click();
 
-            // ✅ Step 3: Scroll and Select a Brand Checkbox (e.g., HP)
-            WebElement brandCheckbox = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//div[text()='HP']")));
+            WebElement errorMsg = wait.until(
+                    ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.flash-error"))
+            );
 
-            // Scroll into view before clicking
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", brandCheckbox);
-            brandCheckbox.click();
-            System.out.println("Selected HP brand filter.");
+            System.out.println("Invalid credentials. Error message: " + errorMsg.getText());
 
-            // ✅ Step 4: Click on the First Product
-            WebElement firstProduct = wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("._1fQZEK")));
-
-            // Scroll into view before clicking
-            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", firstProduct);
-            firstProduct.click();
-
-            // ✅ Step 5: Switch to New Tab and Add to Cart
-            for (String tab : driver.getWindowHandles()) {
-                driver.switchTo().window(tab);
-            }
-
-            WebElement addToCartBtn = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[text()='Add to Cart']")));
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", addToCartBtn);
-            System.out.println("Added product to cart successfully.");
-
+        } catch (TimeoutException e) {
+            System.out.println("Timeout: No error message appeared or elements not found in time.");
+        } catch (NoSuchElementException e) {
+            System.out.println("Element not found: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Error handling HTML controls on Flipkart: " + e.getMessage());
+            System.out.println("Error handling invalid credentials: " + e.getMessage());
         }
     }
 
-    // ✅ Handling Alerts
+
+    public static void handleStaticLocators() {
+        try {
+            // Example for static locators (adjust for your needs)
+            driver.get("https://www.amazon.in");
+            WebElement searchBox = driver.findElement(By.id("twotabsearchtextbox"));
+            searchBox.sendKeys("Laptop");
+            driver.findElement(By.id("nav-search-submit-button")).click();
+            System.out.println("Static locators handled.");
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    public static void handleDynamicCssSelector() {
+        try {
+            // Example for dynamic CSS selector
+            driver.get("https://www.amazon.in");
+            WebElement deals = driver.findElement(By.cssSelector("a[data-csa-c-slot-id='nav_cs_0']"));
+            deals.click();
+            System.out.println("Dynamic CSS Selector handled.");
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    public static void handleDynamicXPath() {
+        try {
+            driver.get("https://www.amazon.in");
+            WebElement mobiles = driver.findElement(By.xpath("//a[contains(text(),'Mobiles')]"));
+            mobiles.click();
+            System.out.println("Dynamic XPath handled.");
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    public static void handleHtmlControls() {
+        try {
+            // Open local HTML file with form elements or a test site like https://demoqa.com/automation-practice-form
+            driver.get("https://demoqa.com/automation-practice-form");
+            System.out.println("HTML controls opened (manual inspection recommended).");
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
     public static void handleAlerts() {
         try {
-            driver.get("https://the-internet.herokuapp.com/javascript_alerts");
-            driver.findElement(By.xpath("//button[text()='Click for JS Alert']")).click();
+            driver.get("https://demoqa.com/alerts");
+
+            driver.findElement(By.id("alertButton")).click();
             Alert alert = driver.switchTo().alert();
-            System.out.println("Simple Alert: " + alert.getText());
+            System.out.println("Simple Alert Text: " + alert.getText());
             alert.accept();
 
-            System.out.println("All alerts handled successfully.");
+            driver.findElement(By.id("confirmButton")).click();
+            Alert confirm = driver.switchTo().alert();
+            System.out.println("Confirm Alert Text: " + confirm.getText());
+            confirm.dismiss();
+
+            driver.findElement(By.id("promtButton")).click();
+            Alert prompt = driver.switchTo().alert();
+            prompt.sendKeys("Hello!");
+            prompt.accept();
+
+            System.out.println("Alerts handled.");
         } catch (Exception e) {
             System.out.println("Error handling alerts: " + e.getMessage());
         }
     }
 
-    // ✅ Handling Windows & Screenshot
-    public static void handleWindowsAndScreenshot() {
+    public static void handleWindowAndScreenshot() {
         try {
-            takeScreenshot("amazon_home");
-            System.out.println("Screenshot captured successfully.");
+            driver.get("https://github.com/2004Ayyappa/ST_Insem-2");
+            takeScreenshot("GitHub_Screenshot");
+            System.out.println("Screenshot taken and saved.");
         } catch (Exception e) {
-            System.out.println("Error in screenshot handling: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // ✅ Screenshot Method (Fixed Directory Issue)
     public static void takeScreenshot(String fileName) {
         try {
-            driver.get("")
             File screenshotsDir = new File("./screenshots/");
             if (!screenshotsDir.exists()) {
                 screenshotsDir.mkdirs();
             }
-
             File srcFile = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
             File destFile = new File(screenshotsDir, fileName + ".png");
             FileUtils.copyFile(srcFile, destFile);
-            System.out.println("Screenshot saved: " + destFile.getAbsolutePath());
+            System.out.println("Screenshot saved at: " + destFile.getAbsolutePath());
         } catch (IOException e) {
             System.out.println("Error capturing screenshot: " + e.getMessage());
         }
